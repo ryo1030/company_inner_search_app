@@ -5,21 +5,21 @@
 ############################################################
 # ライブラリの読み込み
 ############################################################
-import os
 import logging
-from logging.handlers import TimedRotatingFileHandler
-from uuid import uuid4
+import os
 import sys
 import unicodedata
-from dotenv import load_dotenv
-import streamlit as st
-from docx import Document
-from langchain_community.document_loaders import WebBaseLoader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
-import constants as ct
+from logging.handlers import TimedRotatingFileHandler
+from uuid import uuid4
 
+import streamlit as st
+from dotenv import load_dotenv
+from langchain.text_splitter import CharacterTextSplitter
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+
+import constants as ct
 
 ############################################################
 # 設定関連
@@ -31,6 +31,7 @@ load_dotenv()
 ############################################################
 # 関数定義
 ############################################################
+
 
 def initialize():
     """
@@ -52,7 +53,7 @@ def initialize_logger():
     """
     # 指定のログフォルダが存在すれば読み込み、存在しなければ新規作成
     os.makedirs(ct.LOG_DIR_PATH, exist_ok=True)
-    
+
     # 引数に指定した名前のロガー（ログを記録するオブジェクト）を取得
     # 再度別の箇所で呼び出した場合、すでに同じ名前のロガーが存在していれば読み込む
     logger = logging.getLogger(ct.LOGGER_NAME)
@@ -63,9 +64,7 @@ def initialize_logger():
 
     # 1日単位でログファイルの中身をリセットし、切り替える設定
     log_handler = TimedRotatingFileHandler(
-        os.path.join(ct.LOG_DIR_PATH, ct.LOG_FILE),
-        when="D",
-        encoding="utf8"
+        os.path.join(ct.LOG_DIR_PATH, ct.LOG_FILE), when="D", encoding="utf8"
     )
     # 出力するログメッセージのフォーマット定義
     # - 「levelname」: ログの重要度（INFO, WARNING, ERRORなど）
@@ -108,7 +107,7 @@ def initialize_retriever():
     # すでにRetrieverが作成済みの場合、後続の処理を中断
     if "retriever" in st.session_state:
         return
-    
+
     # RAGの参照先となるデータソースの読み込み
     docs_all = load_data_sources()
 
@@ -117,15 +116,13 @@ def initialize_retriever():
         doc.page_content = adjust_string(doc.page_content)
         for key in doc.metadata:
             doc.metadata[key] = adjust_string(doc.metadata[key])
-    
+
     # 埋め込みモデルの用意
     embeddings = OpenAIEmbeddings()
-    
+
     # チャンク分割用のオブジェクトを作成
     text_splitter = CharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
-        separator="\n"
+        chunk_size=ct.CHUNK_SIZE, chunk_overlap=ct.CHUNK_OVERLAP, separator="\n"
     )
 
     # チャンク分割を実施
@@ -135,7 +132,7 @@ def initialize_retriever():
     db = Chroma.from_documents(splitted_docs, embedding=embeddings)
 
     # ベクターストアを検索するRetrieverの作成
-    st.session_state.retriever = db.as_retriever(search_kwargs={"k": 3})
+    st.session_state.retriever = db.as_retriever(search_kwargs={"k": ct.SEARCH_KWARGS})
 
 
 def initialize_session_state():
@@ -223,10 +220,10 @@ def file_load(path, docs_all):
 def adjust_string(s):
     """
     Windows環境でRAGが正常動作するよう調整
-    
+
     Args:
         s: 調整を行う文字列
-    
+
     Returns:
         調整を行った文字列
     """
@@ -236,9 +233,9 @@ def adjust_string(s):
 
     # OSがWindowsの場合、Unicode正規化と、cp932（Windows用の文字コード）で表現できない文字を除去
     if sys.platform.startswith("win"):
-        s = unicodedata.normalize('NFC', s)
+        s = unicodedata.normalize("NFC", s)
         s = s.encode("cp932", "ignore").decode("cp932")
         return s
-    
+
     # OSがWindows以外の場合はそのまま返す
     return s

@@ -5,9 +5,12 @@
 ############################################################
 # ライブラリの読み込み
 ############################################################
-from langchain_community.document_loaders import PyMuPDFLoader, Docx2txtLoader, TextLoader
+from langchain_community.document_loaders import (
+    Docx2txtLoader,
+    PyMuPDFLoader,
+    TextLoader,
+)
 from langchain_community.document_loaders.csv_loader import CSVLoader
-
 
 ############################################################
 # 共通変数の定義
@@ -41,6 +44,9 @@ APP_BOOT_MESSAGE = "アプリが起動されました。"
 # ==========================================
 MODEL = "gpt-4o-mini"
 TEMPERATURE = 0.5
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
+SEARCH_KWARGS = 5
 
 
 # ==========================================
@@ -50,11 +56,10 @@ RAG_TOP_FOLDER_PATH = "./data"
 SUPPORTED_EXTENSIONS = {
     ".pdf": PyMuPDFLoader,
     ".docx": Docx2txtLoader,
-    ".csv": lambda path: CSVLoader(path, encoding="utf-8")
+    ".csv": lambda path: CSVLoader(path, encoding="utf-8"),
+    ".txt": lambda path: TextLoader(path, encoding="utf-8"),
 }
-WEB_URL_LOAD_TARGETS = [
-    "https://generative-ai.web-camp.io/"
-]
+WEB_URL_LOAD_TARGETS = ["https://generative-ai.web-camp.io/"]
 
 
 # ==========================================
@@ -101,7 +106,9 @@ NO_DOC_MATCH_ANSWER = "該当資料なし"
 # ==========================================
 # エラー・警告メッセージ
 # ==========================================
-COMMON_ERROR_MESSAGE = "このエラーが繰り返し発生する場合は、管理者にお問い合わせください。"
+COMMON_ERROR_MESSAGE = (
+    "このエラーが繰り返し発生する場合は、管理者にお問い合わせください。"
+)
 INITIALIZE_ERROR_MESSAGE = "初期化処理に失敗しました。"
 NO_DOC_MATCH_MESSAGE = """
     入力内容と関連する社内文書が見つかりませんでした。\n
