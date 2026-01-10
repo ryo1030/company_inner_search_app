@@ -5,6 +5,7 @@
 ############################################################
 # ライブラリの読み込み
 ############################################################
+import csv
 import logging
 import os
 import sys
@@ -14,6 +15,7 @@ from uuid import uuid4
 
 import streamlit as st
 from dotenv import load_dotenv
+from langchain.schema import Document
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import Chroma
@@ -209,12 +211,64 @@ def file_load(path, docs_all):
     # ファイル名（拡張子を含む）を取得
     file_name = os.path.basename(path)
 
+    if file_name == "社員名簿.csv":
+        docs_all.extend(load_employee_directory_documents(path))
+
     # 想定していたファイル形式の場合のみ読み込む
     if file_extension in ct.SUPPORTED_EXTENSIONS:
         # ファイルの拡張子に合ったdata loaderを使ってデータ読み込み
         loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
         docs = loader.load()
         docs_all.extend(docs)
+
+
+def load_employee_directory_documents(path):
+    """
+    社員名簿CSVを部署単位でグルーピングして読み込む
+
+    Args:
+        path: CSVファイルパス
+
+    Returns:
+        部署ごとのDocument
+    """
+    with open(path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        dept_rows = {}
+        for row in reader:
+            dept = row.get("部署", "").strip() or "不明"
+            dept_rows.setdefault(dept, []).append(row)
+
+    documents = []
+    for dept, rows in dept_rows.items():
+        lines = [
+            f"部署: {dept}",
+            f"人数: {len(rows)}",
+            "社員一覧:",
+        ]
+        for row in rows:
+            lines.append(
+                "- "
+                f"社員ID: {row.get('社員ID', '')}, "
+                f"氏名: {row.get('氏名（フルネーム）', '')}, "
+                f"従業員区分: {row.get('従業員区分', '')}, "
+                f"役職: {row.get('役職', '')}, "
+                f"メールアドレス: {row.get('メールアドレス', '')}, "
+                f"入社日: {row.get('入社日', '')}"
+            )
+
+        documents.append(
+            Document(
+                page_content="\n".join(lines),
+                metadata={
+                    "source": path,
+                    "department": dept,
+                    "row_count": len(rows),
+                },
+            )
+        )
+
+    return documents
 
 
 def adjust_string(s):
